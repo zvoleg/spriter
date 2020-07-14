@@ -1,0 +1,14 @@
+[package]
+name = "spriter"
+version = "0.1.0"
+authors = ["RustySkill <rustySkilll@gmail.com>"]
+edition = "2018"
+
+autoexamples = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+glutin = "0.24"
+gl = "*"
+nalgebra = "*"
