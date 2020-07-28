@@ -43,11 +43,17 @@ impl Handler {
         self.key_handlers.insert(key, Box::new(func));
     }
 
-    pub fn handle_keys(&mut self) {
+    fn handle_keys(&mut self) {
         for key in self.pressed_keys.iter() {
             if self.key_handlers.contains_key(key) {
                 self.key_handlers.get_mut(key).unwrap()();
             }
+        }
+    }
+
+    fn handle_program_keys(&mut self, program: &mut dyn Program) {
+        for key in self.pressed_keys.iter() {
+            program.handle_key_input(*key);
         }
     }
 
@@ -82,6 +88,7 @@ impl Handler {
                 if self.is_run {
                     self.is_run = p.borrow().is_execute();
                 }
+                self.handle_program_keys(&mut *p.borrow_mut());
                 p.borrow_mut().run();
             }
             if !self.is_run {

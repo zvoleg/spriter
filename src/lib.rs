@@ -50,4 +50,5 @@ pub fn init(title: &str, width: u32, height: u32, auto_frame_update: bool) -> (W
 pub trait Program {
     fn is_execute(&self) -> bool;
     fn run(&mut self);
+    fn handle_key_input(&mut self, key: Key);
 }

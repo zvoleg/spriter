@@ -27,38 +27,27 @@ impl Program for Tmp {
     fn run(&mut self) {
         
     }
+
+    fn handle_key_input(&mut self, key: Key) {
+        match key {
+            Key::S => println!("key s is pressed and s = {}", self.get_value()),
+            Key::W => println!("key s is pressed and w = {}", self.get_value()),
+            Key::D => {
+                let val = self.get_value();
+                self.set_value(val + 1);
+            }
+            Key::A => {
+                let val = self.get_value();
+                self.set_value(val - 1);
+            }
+            Key::Escape => self.run = false,
+            _ => (),
+        }
+    }
 }
 
 fn main() {
-    let (window, mut handler) = spriter::init("spriter", 512, 512, true);
+    let (window, handler) = spriter::init("spriter", 512, 512, true);
     let s = Rc::new(RefCell::new(Tmp { value: 5 , run: true}));
-    let s1 = s.clone();
-    handler.add_key_handler(
-        Key::S,
-        move || println!("key s is pressed and s = {}", s1.borrow().get_value()));
-    let s2 = s.clone();
-    handler.add_key_handler(
-        Key::W,
-        move || println!("key s is pressed and w = {}", s2.borrow().get_value()));
-    let s3 = s.clone();
-    handler.add_key_handler(
-        Key::D,
-        move || {
-            let val = s3.borrow().get_value();
-            s3.borrow_mut().set_value(val + 1);
-        });
-    let s4 = s.clone();
-    handler.add_key_handler(
-        Key::A,
-        move || {
-            let val = s4.borrow().get_value();
-            s4.borrow_mut().set_value(val - 1);
-        });
-    let s5 = s.clone();
-    handler.add_key_handler(
-        Key::Escape,
-        move || {
-            s5.borrow_mut().run = false;
-        });
-    handler.run(Rc::new(RefCell::new(window)), Some(s.clone()));
+    handler.run(Rc::new(RefCell::new(window)), Some(s));
 }
