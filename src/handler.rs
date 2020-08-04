@@ -43,6 +43,10 @@ impl Handler {
         self.key_handlers.insert(key, Box::new(func));
     }
 
+    pub fn get_pressed_keys(&self) -> &HashSet<Key> {
+        &self.pressed_keys
+    }
+
     fn handle_keys(&mut self) {
         for key in self.pressed_keys.iter() {
             if self.key_handlers.contains_key(key) {
@@ -70,8 +74,7 @@ impl Handler {
     pub fn run(mut self, window: Rc<RefCell<Window>>, program: Option<Rc<RefCell<dyn Program>>>) -> !  {
         use std::time::{Instant, Duration};
 
-        let event_loop = self.event_loop.unwrap();
-        self.event_loop = None;
+        let event_loop = self.event_loop.take().unwrap();
         let mut frames = 0;
         let mut instant = Instant::now();
         event_loop.run(move |events, _, control_flow| {
