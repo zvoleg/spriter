@@ -20,7 +20,7 @@ use std::cell::RefCell;
 pub struct Handler {
     event_loop: Option<EventLoop<()>>,
     key_handlers: HashMap<Key, Box<dyn FnMut() + 'static>>,
-    pressed_keys: HashSet<Key>,
+    pressed_keys: Rc<RefCell<HashSet<Key>>>,
     auto_frame_update: bool,
     is_run: bool,
 }
@@ -28,7 +28,7 @@ pub struct Handler {
 impl Handler {
     pub fn new(event_loop: Option<EventLoop<()>>, auto_frame_update: bool) -> Handler {
         let key_handlers = HashMap::new();
-        let pressed_keys = HashSet::new();
+        let pressed_keys = Rc::new(RefCell::new(HashSet::new()));
         Handler { 
             event_loop,
             key_handlers,
@@ -43,12 +43,12 @@ impl Handler {
         self.key_handlers.insert(key, Box::new(func));
     }
 
-    pub fn get_pressed_keys(&self) -> &HashSet<Key> {
-        &self.pressed_keys
+    pub fn get_pressed_keys(&self) -> Rc<RefCell<HashSet<Key>>> {
+        self.pressed_keys.clone()
     }
 
     fn handle_keys(&mut self) {
-        for key in self.pressed_keys.iter() {
+        for key in self.pressed_keys.borrow().iter() {
             if self.key_handlers.contains_key(key) {
                 self.key_handlers.get_mut(key).unwrap()();
             }
@@ -56,7 +56,7 @@ impl Handler {
     }
 
     fn handle_program_keys(&mut self, program: &mut dyn Program) {
-        for key in self.pressed_keys.iter() {
+        for key in self.pressed_keys.borrow().iter() {
             program.handle_key_input(*key);
         }
     }
@@ -64,9 +64,9 @@ impl Handler {
     fn check_key(&mut self, input: KeyboardInput) {
         if let Some(key) = input.virtual_keycode {
             if input.state == State::Pressed {
-                self.pressed_keys.insert(key);
+                self.pressed_keys.borrow_mut().insert(key);
             } else {
-                self.pressed_keys.remove(&key);
+                self.pressed_keys.borrow_mut().remove(&key);
             }
         }
     }
