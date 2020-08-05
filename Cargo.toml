@@ -11,4 +11,4 @@ autoexamples = true
 [dependencies]
 glutin = "0.24"
 gl = "*"
-nalgebra = "*"
+lazy_static = "*"

@@ -1,5 +1,7 @@
 extern crate glutin;
 extern crate gl;
+#[macro_use]
+extern crate lazy_static;
 
 pub use glutin::{
     event_loop::ControlFlow as Flow,

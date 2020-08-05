@@ -16,11 +16,19 @@ use super::window::Window;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::sync::Mutex;
+
+lazy_static! {
+    pub static ref PRESSED_KEYS: Mutex<HashSet<Key>> = Mutex::new(HashSet::new());
+}
+
+pub fn get_pressed_keys() -> std::sync::MutexGuard<'static, HashSet<Key>> {
+    PRESSED_KEYS.lock().unwrap()
+}
 
 pub struct Handler {
     event_loop: Option<EventLoop<()>>,
     key_handlers: HashMap<Key, Box<dyn FnMut() + 'static>>,
-    pressed_keys: HashSet<Key>,
     auto_frame_update: bool,
     is_run: bool,
 }
@@ -28,11 +36,9 @@ pub struct Handler {
 impl Handler {
     pub fn new(event_loop: Option<EventLoop<()>>, auto_frame_update: bool) -> Handler {
         let key_handlers = HashMap::new();
-        let pressed_keys = HashSet::new();
         Handler { 
             event_loop,
             key_handlers,
-            pressed_keys,
             auto_frame_update,
             is_run: true,
         }
@@ -43,12 +49,8 @@ impl Handler {
         self.key_handlers.insert(key, Box::new(func));
     }
 
-    pub fn get_pressed_keys(&self) -> &HashSet<Key> {
-        &self.pressed_keys
-    }
-
     fn handle_keys(&mut self) {
-        for key in self.pressed_keys.iter() {
+        for key in get_pressed_keys().iter() {
             if self.key_handlers.contains_key(key) {
                 self.key_handlers.get_mut(key).unwrap()();
             }
@@ -56,7 +58,7 @@ impl Handler {
     }
 
     fn handle_program_keys(&mut self, program: &mut dyn Program) {
-        for key in self.pressed_keys.iter() {
+        for key in get_pressed_keys().iter() {
             program.handle_key_input(*key);
         }
     }
@@ -64,9 +66,9 @@ impl Handler {
     fn check_key(&mut self, input: KeyboardInput) {
         if let Some(key) = input.virtual_keycode {
             if input.state == State::Pressed {
-                self.pressed_keys.insert(key);
+                get_pressed_keys().insert(key);
             } else {
-                self.pressed_keys.remove(&key);
+                get_pressed_keys().remove(&key);
             }
         }
     }

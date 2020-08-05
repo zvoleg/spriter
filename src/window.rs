@@ -1,7 +1,4 @@
-extern crate nalgebra;
 extern crate gl as system_gl;
-
-use nalgebra::{Orthographic3, Matrix4, Vector3};
 
 use glutin::{
     PossiblyCurrent,
@@ -17,14 +14,21 @@ use std::cell::RefCell;
 pub struct Window {
     pub context: ContextWrapper<PossiblyCurrent, GlutinWindow>,
     polygon: Polygon,
-    projection: Orthographic3<f32>,
+    projection: [f32; 16],
     canvases: Vec<Rc<RefCell<Canvas>>>,
 }
 
 impl Window {
     pub fn new(context: ContextWrapper<PossiblyCurrent, GlutinWindow>, width: u32, height: u32) -> Window {
         let polygon = Polygon::new();
-        let projection = Orthographic3::new(0.0, width as f32, height as f32, 0.0, 0.0, 10.0);
+        let width = width as f32;
+        let height = height as f32;
+        let projection = [
+            2. / (width - 0.),               0.,                                0.,                           0.,
+            0.,                              2. / (0. - height),                0.,                           0.,
+            0.,                              0.,                                -(2. / (10. - 0.)),           0.,
+            -((width + 0.) / (width - 0.)),  -((0. + height) / (0. - height)),  -((10. + 0.) / (10. - 0.)),   1.
+        ];
         let canvases = Vec::new();
         Window { 
             context,
@@ -62,7 +66,7 @@ impl Window {
                     self.polygon.projection_location,
                     1,
                     system_gl::FALSE,
-                    self.projection.as_matrix().as_ptr()
+                    self.projection.as_ptr()
                 );
                 system_gl::DrawElements(
                     system_gl::TRIANGLES,
@@ -81,7 +85,7 @@ pub struct Canvas {
     texture: u32,
     texture_width: u32, 
     texture_height: u32,
-    model_matrix: Matrix4<f32>,
+    model_matrix: [f32; 16],
     buffer: Vec<u8>,
 }
 
@@ -93,8 +97,16 @@ impl Canvas {
         gl::vao::bind_vbo(vbo);
         gl::vao::bind_ebo(ebo);
 
-        let mut model_matrix = Matrix4::new_nonuniform_scaling(&Vector3::new(width as f32, height as f32, 1.0));
-        model_matrix.append_translation_mut(&Vector3::new(x as f32, y as f32, -1.0));
+        let width = width as f32;
+        let height = height as f32;
+        let x = x as f32;
+        let y = y as f32;
+        let model_matrix = [
+            width,  0.,     0.,     0.,
+            0.,     height, 0.,     0.,
+            0.,     0.,     1.,     0.,
+            x,      y,      -1.,    1.
+        ];
 
         let buffer = vec![0x50; (texture_width * texture_height * 3) as usize];
         let texture = gl::texture::create_texture();
