@@ -1,8 +1,6 @@
 extern crate spriter;
 
 use spriter::{Key, Program};
-use std::rc::Rc;
-use std::cell::RefCell;
 
 struct Tmp {
     value: i32,
@@ -47,7 +45,7 @@ impl Program for Tmp {
 }
 
 fn main() {
-    let (window, handler) = spriter::init("spriter", 512, 512, true);
-    let s = Rc::new(RefCell::new(Tmp { value: 5 , run: true}));
-    handler.run(Rc::new(RefCell::new(window)), Some(s));
+    let (window, handler) = spriter::init("spriter", 512, 512);
+    let s = Tmp { value: 5 , run: true};
+    handler.run(window, s);
 }

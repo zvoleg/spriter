@@ -29,17 +29,15 @@ pub fn get_pressed_keys() -> std::sync::MutexGuard<'static, HashSet<Key>> {
 pub struct Handler {
     event_loop: Option<EventLoop<()>>,
     key_handlers: HashMap<Key, Box<dyn FnMut() + 'static>>,
-    auto_frame_update: bool,
     is_run: bool,
 }
 
 impl Handler {
-    pub fn new(event_loop: Option<EventLoop<()>>, auto_frame_update: bool) -> Handler {
+    pub fn new(event_loop: Option<EventLoop<()>>) -> Handler {
         let key_handlers = HashMap::new();
         Handler { 
             event_loop,
             key_handlers,
-            auto_frame_update,
             is_run: true,
         }
     }
@@ -73,7 +71,7 @@ impl Handler {
         }
     }
 
-    pub fn run(mut self, window: Rc<RefCell<Window>>, program: Option<Rc<RefCell<dyn Program>>>) -> !  {
+    pub fn run<T: 'static + Program>(mut self, window: Window, mut program: T) -> !  {
         use std::time::{Instant, Duration};
 
         let event_loop = self.event_loop.take().unwrap();
@@ -89,21 +87,17 @@ impl Handler {
                 _ => (),
             }
             self.handle_keys();
-            if let Some(p) = &program {
-                if self.is_run {
-                    self.is_run = p.borrow().is_execute();
-                }
-                self.handle_program_keys(&mut *p.borrow_mut());
-                p.borrow_mut().run();
+            if self.is_run {
+                self.is_run = program.is_execute();
             }
+            self.handle_program_keys(&mut program);
+            program.run();
             if !self.is_run {
                 *control_flow = Flow::Exit;
             }
-            if self.auto_frame_update {
-                window.borrow_mut().swap_buffers();
-            }
+            window.swap_buffers();
             if instant.elapsed() >= Duration::from_secs(1) {
-                window.borrow_mut().context.window().set_title(&format!("fps: {}", frames));
+                window.context.window().set_title(&format!("fps: {}", frames));
                 frames = 0;
                 instant = Instant::now();
             } else {

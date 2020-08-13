@@ -26,7 +26,7 @@ pub mod window;
 use handler::Handler;
 use window::Window;
 
-pub fn init(title: &str, width: u32, height: u32, auto_frame_update: bool) -> (Window, Handler) {
+pub fn init(title: &str, width: u32, height: u32) -> (Window, Handler) {
     let event_loop = EventLoop::new();
     let window_builder = WindowBuilder::new()
         .with_title(title)
@@ -45,7 +45,7 @@ pub fn init(title: &str, width: u32, height: u32, auto_frame_update: bool) -> (W
     }
 
     let window = Window::new(window_context, width, height);
-    let handler = Handler::new(Some(event_loop), auto_frame_update);
+    let handler = Handler::new(Some(event_loop));
     (window, handler)
 }
 

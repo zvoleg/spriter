@@ -44,7 +44,7 @@ impl Window {
         canvas
     }
 
-    pub fn swap_buffers(&mut self) {
+    pub fn swap_buffers(&self) {
 
         unsafe {
             system_gl::Clear(system_gl::COLOR_BUFFER_BIT);
