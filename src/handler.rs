@@ -1,108 +1,107 @@
-use glutin::{
-    event_loop::EventLoop,
-    event::KeyboardInput,
-};
+use super::{Key, Window};
 
-use super::{
-    Key,
-    State,
-    WEvent,
-    Event,
-    Flow,
-    Program,
-};
-use super::window::Window;
+use glutin::event_loop::{EventLoop, ControlFlow};
+use glutin::event::{Event, WindowEvent, ElementState};
 
-use std::collections::{HashMap, HashSet};
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::sync::Mutex;
+use std::collections::HashSet;
+use std::sync::{Mutex, MutexGuard};
+use std::time::{SystemTime, Duration};
 
-lazy_static! {
-    pub static ref PRESSED_KEYS: Mutex<HashSet<Key>> = Mutex::new(HashSet::new());
+#[macro_export(local_inner_macros)]
+macro_rules! handle_key {
+    ($key:expr, $handler:tt) => {
+        if $crate::handler::pressed_keys().contains(&$key) {
+            $handler;
+            $crate::handler::pressed_keys().remove(&$key);
+        }
+    };
 }
 
-pub fn get_pressed_keys() -> std::sync::MutexGuard<'static, HashSet<Key>> {
+#[macro_export(local_inner_macros)]
+macro_rules! if_pressed {
+    ($key:expr, $handler:tt) => {
+        if $crate::handler::pressed_keys().contains(&$key) {
+            $handler;
+        }
+    };
+}
+
+#[macro_export(local_inner_macros)]
+macro_rules! handle_press_and_release {
+    ($key:expr, $press:tt, $release:tt) => {
+        if $crate::handler::pressed_keys().contains(&$key) {
+            $press;
+        } else if $crate::handler::released_keys().contains(&$key) {
+            $release;
+        }
+    };
+}
+
+lazy_static! {
+    static ref PRESSED_KEYS: Mutex<HashSet<Key>> = Mutex::new(HashSet::new());
+}
+lazy_static! {
+    static ref RELEASED_KEYS: Mutex<HashSet<Key>> = Mutex::new(HashSet::new());
+}
+
+pub fn pressed_keys() -> MutexGuard<'static, HashSet<Key>> {
     PRESSED_KEYS.lock().unwrap()
 }
 
+pub fn released_keys() -> MutexGuard<'static, HashSet<Key>> {
+    RELEASED_KEYS.lock().unwrap()
+}
+
 pub struct Handler {
-    event_loop: Option<EventLoop<()>>,
-    key_handlers: HashMap<Key, Box<dyn FnMut() + 'static>>,
-    is_run: bool,
+    event_loop: EventLoop<()>,
 }
 
 impl Handler {
-    pub fn new(event_loop: Option<EventLoop<()>>) -> Handler {
-        let key_handlers = HashMap::new();
-        Handler { 
-            event_loop,
-            key_handlers,
-            is_run: true,
-        }
+    pub fn new(event_loop: EventLoop<()>) -> Self {
+        Handler { event_loop }
     }
 
-    pub fn add_key_handler<F>(&mut self, key: Key, func: F)
-    where F: FnMut() + 'static {
-        self.key_handlers.insert(key, Box::new(func));
-    }
-
-    fn handle_keys(&mut self) {
-        for key in get_pressed_keys().iter() {
-            if self.key_handlers.contains_key(key) {
-                self.key_handlers.get_mut(key).unwrap()();
-            }
-        }
-    }
-
-    fn handle_program_keys(&mut self, program: &mut dyn Program) {
-        for key in get_pressed_keys().iter() {
-            program.handle_key_input(*key);
-        }
-    }
-
-    fn check_key(&mut self, input: KeyboardInput) {
-        if let Some(key) = input.virtual_keycode {
-            if input.state == State::Pressed {
-                get_pressed_keys().insert(key);
-            } else {
-                get_pressed_keys().remove(&key);
-            }
-        }
-    }
-
-    pub fn run<T: 'static + Program>(mut self, window: Window, mut program: T) -> !  {
-        use std::time::{Instant, Duration};
-
-        let event_loop = self.event_loop.take().unwrap();
-        let mut frames = 0;
-        let mut instant = Instant::now();
-        event_loop.run(move |events, _, control_flow| {
-            *control_flow = Flow::Poll;
-            match events {
-                Event::WindowEvent { event: WEvent::KeyboardInput { input, .. } , .. } => self.check_key(input),
-                Event::WindowEvent { event: WEvent::CloseRequested, .. } => {
-                    self.is_run = false;
+    pub fn run<T: 'static + Program>(self, mut program: T, window: Window) -> ! {
+        let mut instant = SystemTime::now();
+        self.event_loop.run(move |event, _, control_flow| {
+            match event {
+                Event::LoopDestroyed => return,
+                Event::WindowEvent { event, .. } => match event {
+                    WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+                    WindowEvent::KeyboardInput { input, .. } => {
+                        if let Some(key) = input.virtual_keycode {
+                            match input.state {
+                                ElementState::Pressed => {pressed_keys().insert(key);},
+                                ElementState::Released => {
+                                    pressed_keys().remove(&key);
+                                    released_keys().insert(key);
+                                },
+                            };
+                        };
+                    },
+                    _ => (),
+                },
+                Event::MainEventsCleared => {
+                    let frame_duration = instant.elapsed().unwrap();
+                    instant = SystemTime::now();
+                    if program.execute(frame_duration) {
+                        window.request_redraw();
+                    }
+                    if !program.is_run() {
+                        *control_flow = ControlFlow::Exit;
+                    }
+                    released_keys().clear();
+                },
+                Event::RedrawRequested(_) => {
+                    window.update()
                 }
-                _ => (),
+                _ => ()
             }
-            self.handle_keys();
-            if self.is_run {
-                self.is_run = program.is_execute();
-            }
-            self.handle_program_keys(&mut program);
-            program.run();
-            if !self.is_run {
-                *control_flow = Flow::Exit;
-            }
-            window.swap_buffers();
-            if instant.elapsed() >= Duration::from_secs(1) {
-                window.context.window().set_title(&format!("fps: {}", frames));
-                frames = 0;
-                instant = Instant::now();
-            } else {
-                frames += 1;
-            }
-        })
+        });
     }
+}
+
+pub trait Program {
+    fn execute(&mut self, frame_duration: Duration) -> bool;
+    fn is_run(&self) -> bool;
 }

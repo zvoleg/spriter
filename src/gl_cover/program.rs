@@ -1,15 +1,14 @@
-extern crate gl;
+use gl::types::*;
 
-use gl::types::GLenum;
 use std::ffi::CString;
 
-pub fn create_shader(typ: GLenum) -> u32 {
+pub fn create_shader(type_: GLenum) -> GLuint {
     unsafe {
-        gl::CreateShader(typ)
+        gl::CreateShader(type_)
     }
 }
 
-pub fn shader_src(shader: u32, src: &str) {
+pub fn shader_source(shader: GLuint, src: &str) {
     unsafe {
         gl::ShaderSource(
             shader,
@@ -20,47 +19,69 @@ pub fn shader_src(shader: u32, src: &str) {
     }
 }
 
-pub fn compile_shader(shader: u32) {
+pub fn copmpile_shader(shader: GLuint) {
     unsafe {
         gl::CompileShader(shader);
     }
 }
 
-pub fn delete_shader(shader: u32) {
-    unsafe {
-        gl::DeleteShader(shader);
-    }
-}
-
-pub fn create_program() -> u32 {
+pub fn create_program() -> GLuint {
     unsafe {
         gl::CreateProgram()
     }
 }
 
-pub fn attach_shader(program: u32, shader: u32) {
+pub fn attach_shader(program: GLuint, shader: GLuint) {
     unsafe {
         gl::AttachShader(program, shader);
     }
 }
 
-pub fn link_program(program: u32) {
+pub fn link_program(program: GLuint) {
     unsafe {
         gl::LinkProgram(program);
     }
 }
 
-pub fn use_program(program: u32) {
+pub fn delete_shader(shader: GLuint) {
+    unsafe {
+        gl::DeleteShader(shader);
+    }
+}
+
+pub fn use_program(program: GLuint) {
     unsafe {
         gl::UseProgram(program);
     }
 }
 
-pub fn get_uniform(program: u32, uniform: &str) -> i32 {
+pub fn vertex_attrib_pointer(index: GLuint, size: GLint, step: usize, offset: usize) {
     unsafe {
-        gl::GetUniformLocation(
-            program,
-            CString::new(uniform).unwrap().as_ptr()
-        )
+        gl::VertexAttribPointer(
+            index,
+            size,
+            gl::FLOAT,
+            gl::FALSE,
+            (step * std::mem::size_of::<f32>()) as i32,
+            (offset * std::mem::size_of::<f32>()) as *const _
+        );
+    }
+}
+
+pub fn enable_attribute(index: GLuint) {
+    unsafe {
+        gl::EnableVertexAttribArray(index);
+    }
+}
+
+pub fn uniform_location(program: GLuint, uniform: &str) -> GLint {
+    unsafe {
+        gl::GetUniformLocation(program, CString::new(uniform).unwrap().as_ptr())
+    }
+}
+
+pub fn uniform_matrix(uniform_location: GLint, matrix: &[f32]) {
+    unsafe {
+        gl::UniformMatrix4fv(uniform_location, 1, gl::FALSE, matrix.as_ptr());
     }
 }

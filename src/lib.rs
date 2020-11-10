@@ -1,56 +1,41 @@
 extern crate glutin;
-extern crate gl;
 #[macro_use]
 extern crate lazy_static;
 
-pub use glutin::{
-    event_loop::ControlFlow as Flow,
-    event::Event,
-    event::WindowEvent as WEvent,
-    event::VirtualKeyCode as Key,
-    event::ElementState as State,
-};
+pub use glutin::event::VirtualKeyCode as Key;
 
-use glutin::{
-    event_loop::EventLoop,
-    window::WindowBuilder,
-    ContextBuilder,
-    dpi::PhysicalSize,
-};
-
-mod gl_cover;
+use glutin::event_loop::EventLoop;
+use glutin::window::WindowBuilder;
+use glutin::ContextBuilder;
+use glutin::dpi::PhysicalSize;
 
 pub mod handler;
 pub mod window;
+mod gl_cover;
 
 use handler::Handler;
 use window::Window;
 
-pub fn init(title: &str, width: u32, height: u32) -> (Window, Handler) {
+pub fn init(title: &str, width: u32, height: u32) -> (Handler, Window) {
     let event_loop = EventLoop::new();
+
     let window_builder = WindowBuilder::new()
         .with_title(title)
         .with_inner_size(PhysicalSize::new(width, height));
-    let window_context = ContextBuilder::new()
+
+    #[cfg(target_os = "windows")]
+    let window_builder = {
+        use glutin::platform::windows::WindowBuilderExtWindows;
+        window_builder.with_drag_and_drop(false)
+    };
+
+    let windowed_context = ContextBuilder::new()
         .with_gl(glutin::GlRequest::Latest)
         .with_gl_profile(glutin::GlProfile::Core)
         .build_windowed(window_builder, &event_loop)
         .unwrap();
-    let window_context = unsafe { window_context.make_current().unwrap() };
-    gl::load_with(|ptr| window_context.get_proc_address(ptr) as *const _);
-    
-    unsafe {
-        gl::Viewport(0, 0, width as i32, height as i32);
-        gl::ClearColor(0.5f32, 0.5, 0.65, 1.0);
-    }
 
-    let window = Window::new(window_context, width, height);
-    let handler = Handler::new(Some(event_loop));
-    (window, handler)
-}
+    let windowed_context = unsafe { windowed_context.make_current().unwrap() };
 
-pub trait Program {
-    fn is_execute(&self) -> bool;
-    fn run(&mut self);
-    fn handle_key_input(&mut self, key: Key);
+    (Handler::new(event_loop), Window::new(windowed_context, width, height))
 }

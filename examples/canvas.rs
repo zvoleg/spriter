@@ -1,22 +1,22 @@
 extern crate spriter;
 
-use spriter::Program;
+use spriter::handler::Program;
+use std::time::Duration;
 
 struct Nope();
 
 impl Program for Nope {
-    fn run(&mut self) {}
-    fn is_execute(&self) -> bool { todo!() }
-    fn handle_key_input(&mut self, _: spriter::Key) { todo!() }
+    fn execute(&mut self, frame_duration: Duration) -> bool { false }
+    fn is_run(&self) -> bool { todo!() }
 }
 
 fn main() {
-    let (mut window, handler) = spriter::init("spriter", 512, 512);
-    let canvas = window.create_canvas(50, 50, 120, 120, 30, 30);
+    let (handler, mut window) = spriter::init("spriter", 512, 512);
+    let mut canvas = window.create_canvas(50, 50, 120, 120, 30, 30);
     let mut color = 0xFFFFFF;
     for i in 0..30 {
-        canvas.borrow_mut().set_color(i, i, color);
+        canvas.set_pixel(i, i, color);
         color <<= 1;
     }
-    handler.run(window, Nope());
+    handler.run(Nope(), window);
 }
