@@ -1,4 +1,5 @@
 use super::{Key, Window};
+use super::Render;
 
 use glutin::event_loop::{EventLoop, ControlFlow};
 use glutin::event::{Event, WindowEvent, ElementState};

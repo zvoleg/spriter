@@ -3,9 +3,10 @@ extern crate gl as system_gl;
 use glutin::{ContextWrapper, PossiblyCurrent};
 
 use super::gl_cover as gl;
+use super::Render;
 
 pub struct Window {
-    pub context: ContextWrapper<PossiblyCurrent, glutin::window::Window>,
+    context: ContextWrapper<PossiblyCurrent, glutin::window::Window>,
     polygon: Polygon,
     canvases: Vec<CanvasAtributes>,
     projection_matrix: [f32; 16],
@@ -37,7 +38,11 @@ impl Window {
         canvas
     }
 
-    pub fn update(&self) {
+    
+}
+
+impl Render for Window {
+    fn update(&self) {
         unsafe {
             system_gl::Clear(system_gl::COLOR_BUFFER_BIT);
         }
@@ -54,7 +59,7 @@ impl Window {
         self.context.swap_buffers().unwrap();
     }
 
-    pub fn request_redraw(&self) {
+    fn request_redraw(&self) {
         self.context.window().request_redraw();
     }
 }

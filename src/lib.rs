@@ -2,19 +2,20 @@ extern crate glutin;
 #[macro_use]
 extern crate lazy_static;
 
+pub mod handler;
+pub mod window;
+pub use handler::Program;
 pub use glutin::event::VirtualKeyCode as Key;
+
+mod gl_cover;
+
+use handler::Handler;
+use window::Window;
 
 use glutin::event_loop::EventLoop;
 use glutin::window::WindowBuilder;
 use glutin::ContextBuilder;
 use glutin::dpi::PhysicalSize;
-
-pub mod handler;
-pub mod window;
-mod gl_cover;
-
-use handler::Handler;
-use window::Window;
 
 pub fn init(title: &str, width: u32, height: u32) -> (Handler, Window) {
     let event_loop = EventLoop::new();
@@ -38,4 +39,9 @@ pub fn init(title: &str, width: u32, height: u32) -> (Handler, Window) {
     let windowed_context = unsafe { windowed_context.make_current().unwrap() };
 
     (Handler::new(event_loop), Window::new(windowed_context, width, height))
+}
+
+trait Render {
+    fn update(&self);
+    fn request_redraw(&self);
 }

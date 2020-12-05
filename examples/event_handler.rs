@@ -34,7 +34,7 @@ impl Tmp {
 }
 
 impl Program for Tmp {
-    fn execute(&mut self, frame_duration: Duration) -> bool {
+    fn execute(&mut self, _frame_duration: Duration) -> bool {
         self.handle_key_input();
         false
     }

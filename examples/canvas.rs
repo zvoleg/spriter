@@ -6,7 +6,7 @@ use std::time::Duration;
 struct Nope();
 
 impl Program for Nope {
-    fn execute(&mut self, frame_duration: Duration) -> bool { false }
+    fn execute(&mut self, _frame_duration: Duration) -> bool { false }
     fn is_run(&self) -> bool { todo!() }
 }
 
