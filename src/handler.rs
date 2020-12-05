@@ -7,49 +7,57 @@ use std::collections::HashSet;
 use std::sync::{Mutex, MutexGuard};
 use std::time::{SystemTime, Duration};
 
-#[macro_export(local_inner_macros)]
-macro_rules! handle_key {
-    ($key:expr, $handler:tt) => {
-        if $crate::handler::pressed_keys().contains(&$key) {
-            $handler;
-            $crate::handler::pressed_keys().remove(&$key);
-        }
-    };
-}
-
-#[macro_export(local_inner_macros)]
-macro_rules! if_pressed {
-    ($key:expr, $handler:tt) => {
-        if $crate::handler::pressed_keys().contains(&$key) {
-            $handler;
-        }
-    };
-}
-
-#[macro_export(local_inner_macros)]
-macro_rules! handle_press_and_release {
-    ($key:expr, $press:tt, $release:tt) => {
-        if $crate::handler::pressed_keys().contains(&$key) {
-            $press;
-        } else if $crate::handler::released_keys().contains(&$key) {
-            $release;
-        }
-    };
-}
-
 lazy_static! {
     static ref PRESSED_KEYS: Mutex<HashSet<Key>> = Mutex::new(HashSet::new());
-}
-lazy_static! {
     static ref RELEASED_KEYS: Mutex<HashSet<Key>> = Mutex::new(HashSet::new());
 }
 
-pub fn pressed_keys() -> MutexGuard<'static, HashSet<Key>> {
+fn pressed_keys() -> MutexGuard<'static, HashSet<Key>> {
     PRESSED_KEYS.lock().unwrap()
 }
 
-pub fn released_keys() -> MutexGuard<'static, HashSet<Key>> {
+fn released_keys() -> MutexGuard<'static, HashSet<Key>> {
     RELEASED_KEYS.lock().unwrap()
+}
+
+
+pub fn key_is_pressed(key: &Key) -> bool {
+    pressed_keys().contains(key)
+}
+
+pub fn key_is_released(key: &Key) -> bool {
+    released_keys().contains(key)
+}
+
+pub fn try_remove_pressed_key(key: &Key) -> bool {
+    pressed_keys().remove(key)
+}
+
+#[macro_export]
+macro_rules! if_pressed {
+    ($key: expr, $action: tt) => {
+        if $crate::handler::key_is_pressed(&$key) {
+            $action;
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! handle_press {
+    ($key: expr, $action: tt) => {
+        if $crate::handler::try_remove_pressed_key(&$key) {
+            $action;
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! if_released {
+    ($key: expr, $action: tt) => {
+        if $crate::handler::key_is_released(&$key) {
+            $action;
+        }
+    };
 }
 
 pub struct Handler {
