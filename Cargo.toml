@@ -12,3 +12,4 @@ autoexamples = true
 glutin = "0.25"
 gl = "*"
 lazy_static = "*"
+rand = "*"

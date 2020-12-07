@@ -73,9 +73,16 @@ pub struct CanvasAtributes {
     t_height: u32,
 }
 
+fn u32_into_rgb(color: u32) -> (u8, u8, u8) {
+    let r = (color >> 16) as u8;
+    let g = (color >> 8) as u8;
+    let b = color as u8;
+    (r, g, b)
+}
+
 pub struct Canvas {
     texture_buffer: Vec<(u8, u8, u8)>,
-    clear_buffer: Vec<(u8, u8, u8)>,
+    color: (u8, u8, u8),
     t_width: u32,
 }
 
@@ -101,28 +108,32 @@ impl Canvas {
             x, y, -1.0, 1.0,
         ];
         let texture_buffer = vec![(0x80, 0xA0, 0x80); (t_width * t_height) as usize];
-        let texture_buffer_ptr = texture_buffer.as_ptr();
-        let clear_buffer = vec![(0x80, 0xA0, 0x80); (t_width * t_height) as usize];
+        let texture_buffer_ptr = texture_buffer.as_ptr() as *const _;
+        let color = (0x80, 0xA0, 0x80);
         let texture = gl::texture::create_texture();
         gl::texture::bind_texture(texture);
         gl::texture::setup_texture();
         gl::texture::unpack_data_alignment();
         gl::texture::texture_image(t_width, t_height, &texture_buffer);
-        let canvas = Canvas { texture_buffer, clear_buffer, t_width };
+        let canvas = Canvas { texture_buffer, color, t_width };
         let canvas_atributes = CanvasAtributes { vao, texture, model_matrix, texture_buffer_ptr, t_width, t_height };
         (canvas, canvas_atributes)
     }
 
     pub fn set_pixel(&mut self, x: u32, y: u32, color: u32) {
-        let r = (color >> 16) as u8;
-        let g = (color >> 8) as u8;
-        let b = color as u8;
+        let color = u32_into_rgb(color);
         let idx = (self.t_width * y + x) as usize;
-        self.texture_buffer[idx] = (r, g, b); 
+        self.texture_buffer[idx] = color; 
+    }
+
+    pub fn set_clear_color(&mut self, color: u32) {
+        self.color = u32_into_rgb(color);
     }
 
     pub fn clear(&mut self) {
-        self.texture_buffer.copy_from_slice(&self.clear_buffer);
+        for pixel in &mut self.texture_buffer {
+            *pixel = self.color;
+        }
     }
 }
 

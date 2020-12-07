@@ -5,6 +5,7 @@ extern crate lazy_static;
 pub mod handler;
 pub mod window;
 pub use handler::Program;
+pub use window::Canvas;
 pub use glutin::event::VirtualKeyCode as Key;
 
 mod gl_cover;
