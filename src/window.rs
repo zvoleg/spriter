@@ -79,8 +79,8 @@ impl Color {
     }
 
     pub fn from_u32(color: u32) -> Self {
-        let r = (color << 16) as u8;
-        let g = (color << 8) as u8;
+        let r = (color >> 16) as u8;
+        let g = (color >> 8) as u8;
         let b = color as u8;
         Self::new(r, g, b)
     }
