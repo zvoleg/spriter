@@ -1,9 +1,7 @@
 #[macro_use]
 extern crate spriter;
 
-use spriter::Key;
-use spriter::Program;
-use spriter::window::Canvas;
+use spriter::{Canvas, Color, Program, Key};
 
 use std::time::Duration;
 
@@ -42,7 +40,7 @@ impl Program for Dot {
         if self.y > 127.0 {
             self.y = 127.0;
         }
-        self.canvas.set_pixel(self.x as u32, self.y as u32, self.color);
+        self.canvas.set_pixel(self.x as u32, self.y as u32, Color::from_u32(self.color));
         if self.time_accumulator > Duration::from_secs_f64(1.0 / 60.0) {
             self.time_accumulator = Duration::new(0, 0);
             true

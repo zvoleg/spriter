@@ -2,7 +2,7 @@
 extern crate spriter;
 extern crate rand;
 
-use spriter::{Program, Key, Canvas};
+use spriter::{Program, Key, Canvas, Color};
 
 use std::time::Duration;
 use std::collections::VecDeque;
@@ -73,13 +73,14 @@ impl Program for Game {
                 self.snake.body.pop_back();
             }
 
-            let mut color = 0xCC8888;
+            let mut color = Color::new(0xCC, 0x88, 0x88);
+            // let mut color = 0xCC8888;
             for (x, y) in &self.snake.body {
                 self.canvas.set_pixel(*x, *y, color);
-                color = 0x5555AA;
+                color = Color::new(0x55, 0x55, 0xAA);
             }
             let target = &self.target;
-            self.canvas.set_pixel(target.0, target.1, 0x33FF33);
+            self.canvas.set_pixel(target.0, target.1, color);
             true
         } else {
             false
@@ -94,7 +95,7 @@ impl Program for Game {
 fn main() {
     let (handler, mut window) = spriter::init("Snake", 512, 512);
     let mut canvas = window.create_canvas(0, 0, 512, 512, 64, 64);
-    canvas.set_clear_color(0x222255);
+    canvas.set_clear_color(Color::new(0x22, 0x22, 0x55));
     let target = ((rand::random::<f32>() * 63.0).round() as u32, (rand::random::<f32>() * 63.0).round() as u32);
     let game = Game { snake: Snake::new(), target, canvas, time_accumulator: Duration::new(0, 0), step_time: Duration::from_secs_f32(1.0 / 10.0), run: true };
     handler.run(game, window);

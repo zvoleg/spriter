@@ -14,7 +14,7 @@ pub fn bind_texture(texture: GLuint) {
     }
 }
 
-pub fn texture_image(width: u32, height: u32, buffer: &[(u8, u8, u8)]) {
+pub fn texture_image(width: u32, height: u32, buffer: *const ()) {
     unsafe {
         gl::TexImage2D(
             gl::TEXTURE_2D,
@@ -25,12 +25,12 @@ pub fn texture_image(width: u32, height: u32, buffer: &[(u8, u8, u8)]) {
             0,
             gl::RGB,
             gl::UNSIGNED_BYTE,
-            buffer.as_ptr() as *const _
+            buffer as *const _
         );
     }
 }
 
-pub fn texture_subimage(width: u32, height: u32, buffer: *const (u8, u8, u8)) {
+pub fn texture_subimage(width: u32, height: u32, buffer: *const ()) {
     unsafe {
         gl::TexSubImage2D(
             gl::TEXTURE_2D,

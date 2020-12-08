@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate spriter;
 
-use spriter::{Key, handler::Program};
+use spriter::{Key, Program};
 use std::time::Duration;
 
 struct Tmp {
@@ -19,8 +19,8 @@ impl Tmp {
     }
 
     fn handle_key_input(&mut self) {
-        if_pressed!(Key::S, { println!("key s is pressed and s = {}", self.get_value()) });
-        if_pressed!(Key::W, { println!("key s is pressed and w = {}", self.get_value()) });
+        handle_press!(Key::S, { println!("key s is pressed and s = {}", self.get_value()) });
+        handle_press!(Key::W, { println!("key s is pressed and w = {}", self.get_value()) });
         if_pressed!(Key::D, {
             let val = self.get_value();
             self.set_value(val + 1);
@@ -42,8 +42,6 @@ impl Program for Tmp {
     fn is_run(&self) -> bool {
         self.run
     }
-
-    
 }
 
 fn main() {
