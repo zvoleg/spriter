@@ -5,22 +5,6 @@ use glutin::{ContextWrapper, PossiblyCurrent};
 use super::gl_cover as gl;
 use super::Render;
 
-#[derive(Copy, Clone)]
-pub struct Color(u8, u8, u8);
-
-impl Color {
-    pub fn new(r: u8, g: u8, b: u8) -> Self {
-        Self(r, g, b)
-    }
-
-    pub fn from_u32(color: u32) -> Self {
-        let r = (color << 16) as u8;
-        let g = (color << 8) as u8;
-        let b = color as u8;
-        Self::new(r, g, b)
-    }
-}
-
 pub struct Window {
     context: ContextWrapper<PossiblyCurrent, glutin::window::Window>,
     polygon: Polygon,
@@ -49,12 +33,10 @@ impl Window {
     }
 
     pub fn create_canvas(&mut self, x: u32, y: u32, width: u32, height: u32, t_width: u32, t_height: u32) -> Canvas {
-        let (canvas, canvas_atributes) = Canvas::new(&self.polygon, x, y, width, height, t_width, t_height);
+        let (canvas, canvas_atributes) = Canvas::new(x, y, width, height, t_width, t_height);
         self.canvases.push(canvas_atributes);
         canvas
     }
-
-    
 }
 
 impl Render for Window {
@@ -63,7 +45,6 @@ impl Render for Window {
             system_gl::Clear(system_gl::COLOR_BUFFER_BIT);
         }
         for canvas in self.canvases.iter() {
-            gl::buffer::bind_array(canvas.vao);
             gl::texture::bind_texture(canvas.texture);
             gl::texture::texture_subimage(canvas.t_width, canvas.t_height, canvas.texture_buffer_ptr);
             gl::program::uniform_matrix(self.polygon.un_model, &canvas.model_matrix);
@@ -81,12 +62,28 @@ impl Render for Window {
 }
 
 pub struct CanvasAtributes {
-    vao: u32,
     texture: u32,
     model_matrix: [f32; 16],
     texture_buffer_ptr: *const (),
     t_width: u32,
     t_height: u32,
+}
+
+
+#[derive(Copy, Clone)]
+pub struct Color(u8, u8, u8);
+
+impl Color {
+    pub fn new(r: u8, g: u8, b: u8) -> Self {
+        Self(r, g, b)
+    }
+
+    pub fn from_u32(color: u32) -> Self {
+        let r = (color << 16) as u8;
+        let g = (color << 8) as u8;
+        let b = color as u8;
+        Self::new(r, g, b)
+    }
 }
 
 pub struct Canvas {
@@ -96,16 +93,7 @@ pub struct Canvas {
 }
 
 impl Canvas {
-    fn new(polygon: &Polygon, x: u32, y: u32, width: u32, height: u32, t_width: u32, t_height: u32) -> (Self, CanvasAtributes) {
-        let vao = gl::buffer::generate_vertex_array();
-        gl::buffer::bind_array(vao);
-        gl::buffer::bind_buffer(polygon.vbo, system_gl::ARRAY_BUFFER);
-        
-        gl::program::vertex_attrib_pointer(0, 2, 4, 0);
-        gl::program::vertex_attrib_pointer(1, 2, 4, 2);
-        gl::program::enable_attribute(0);
-        gl::program::enable_attribute(1);
-
+    fn new(x: u32, y: u32, width: u32, height: u32, t_width: u32, t_height: u32) -> (Self, CanvasAtributes) {
         let x = x as f32;
         let y = y as f32;
         let width = width as f32;
@@ -125,7 +113,7 @@ impl Canvas {
         gl::texture::unpack_data_alignment();
         gl::texture::texture_image(t_width, t_height, texture_buffer_ptr);
         let canvas = Canvas { texture_buffer, color, t_width };
-        let canvas_atributes = CanvasAtributes { vao, texture, model_matrix, texture_buffer_ptr, t_width, t_height };
+        let canvas_atributes = CanvasAtributes { texture, model_matrix, texture_buffer_ptr, t_width, t_height };
         (canvas, canvas_atributes)
     }
 
@@ -146,13 +134,15 @@ impl Canvas {
 }
 
 struct Polygon {
-    vbo: u32,
     un_projection: i32,
     un_model: i32,
 }
 
 impl Polygon {
     fn init() -> Self {
+        let vao = gl::buffer::generate_vertex_array();
+        gl::buffer::bind_array(vao);
+
         let vertices = [
             0.0, 0.0, 0.0, 0.0,
             1.0, 0.0, 1.0, 0.0,
@@ -211,9 +201,14 @@ impl Polygon {
         gl::program::delete_shader(vertex_shader);
         gl::program::delete_shader(fragment_shader);
 
+        gl::program::vertex_attrib_pointer(0, 2, 4, 0);
+        gl::program::vertex_attrib_pointer(1, 2, 4, 2);
+        gl::program::enable_attribute(0);
+        gl::program::enable_attribute(1);
+
         let un_projection = gl::program::uniform_location(program, "projection");
         let un_model = gl::program::uniform_location(program, "model");
 
-        Polygon { vbo, un_projection, un_model }
+        Polygon { un_projection, un_model }
     }
 }
