@@ -1,5 +1,3 @@
-extern crate gl as system_gl;
-
 use glutin::{ContextWrapper, PossiblyCurrent};
 
 use super::gl_cover as gl;
@@ -7,19 +5,22 @@ use super::Render;
 
 pub struct Window {
     context: ContextWrapper<PossiblyCurrent, glutin::window::Window>,
-    polygon: Polygon,
+    unfrm_projection: i32,
+    unfrm_model: i32,
     canvases: Vec<CanvasAtributes>,
     projection_matrix: [f32; 16],
 }
 
 impl Window {
     pub fn new(context: ContextWrapper<PossiblyCurrent, glutin::window::Window>, width: u32, height: u32) -> Self {
-        system_gl::load_with(|ptr| context.get_proc_address(ptr) as *const _);
-        unsafe {
-            system_gl::Viewport(0, 0, width as i32, height as i32);
-            system_gl::ClearColor(0.3, 0.3, 0.7, 1.0);
-        }
-        let polygon = Polygon::init();
+        gl::load_proc_address(|ptr| context.get_proc_address(ptr));
+        gl::view_port(0, 0, width as i32, height as i32);
+        gl::clear_color(0.3, 0.3, 0.7, 1.0);
+        
+        let program = setup_quad_program();
+        let unfrm_projection = gl::program::uniform_location(program, "projection");
+        let unfrm_model = gl::program::uniform_location(program, "model");
+
         let canvases = Vec::new();
         let width = width as f32;
         let height = height as f32;
@@ -29,7 +30,7 @@ impl Window {
             0.0, 0.0, -2.0 / (10.0 - 0.1), 0.0,
             -1.0, 1.0, -1.0202, 1.0
         ];
-        Window { context, polygon, canvases, projection_matrix }
+        Window { context, unfrm_projection, unfrm_model, canvases, projection_matrix }
     }
 
     pub fn create_canvas(&mut self, x: u32, y: u32, width: u32, height: u32, t_width: u32, t_height: u32) -> Canvas {
@@ -41,17 +42,13 @@ impl Window {
 
 impl Render for Window {
     fn update(&self) {
-        unsafe {
-            system_gl::Clear(system_gl::COLOR_BUFFER_BIT);
-        }
+        gl::clear();
         for canvas in self.canvases.iter() {
             gl::texture::bind_texture(canvas.texture);
             gl::texture::texture_subimage(canvas.t_width, canvas.t_height, canvas.texture_buffer_ptr);
-            gl::program::uniform_matrix(self.polygon.un_model, &canvas.model_matrix);
-            gl::program::uniform_matrix(self.polygon.un_projection, &self.projection_matrix);
-            unsafe {
-                system_gl::DrawArrays(system_gl::TRIANGLES, 0, 6);
-            }
+            gl::program::uniform_matrix(self.unfrm_model, &canvas.model_matrix);
+            gl::program::uniform_matrix(self.unfrm_projection, &self.projection_matrix);
+            gl::draw_quad();
         }
         self.context.swap_buffers().unwrap();
     }
@@ -68,7 +65,6 @@ pub struct CanvasAtributes {
     t_width: u32,
     t_height: u32,
 }
-
 
 #[derive(Copy, Clone)]
 pub struct Color(u8, u8, u8);
@@ -90,6 +86,7 @@ pub struct Canvas {
     texture_buffer: Vec<Color>,
     color: Color,
     t_width: u32,
+    t_height: u32,
 }
 
 impl Canvas {
@@ -112,14 +109,22 @@ impl Canvas {
         gl::texture::setup_texture();
         gl::texture::unpack_data_alignment();
         gl::texture::texture_image(t_width, t_height, texture_buffer_ptr);
-        let canvas = Canvas { texture_buffer, color, t_width };
+
+        let canvas = Canvas { texture_buffer, color, t_width, t_height };
         let canvas_atributes = CanvasAtributes { texture, model_matrix, texture_buffer_ptr, t_width, t_height };
+
         (canvas, canvas_atributes)
     }
 
-    pub fn set_pixel(&mut self, x: u32, y: u32, color: Color) {
+    pub fn set_pixel(&mut self, x: i32, y: i32, color: Color) -> Result<(), String> {
+        if x < 0 || self.t_width as i32 <= x || y < 0 || self.t_height as i32 <= y {
+            return Err(format!("out of bounds: x={}; y={}", x, y));
+        }
+        let x = x as u32;
+        let y = y as u32;
         let idx = (self.t_width * y + x) as usize;
         self.texture_buffer[idx] = color; 
+        Ok(())
     }
 
     pub fn set_clear_color(&mut self, color: Color) {
@@ -133,82 +138,77 @@ impl Canvas {
     }
 }
 
-struct Polygon {
-    un_projection: i32,
-    un_model: i32,
+fn setup_quad_program() -> u32 {
+    let vao = gl::buffer::generate_vertex_array();
+    gl::buffer::bind_array(vao);
+
+    let vertices = [
+        0.0, 0.0, 0.0, 0.0,
+        1.0, 0.0, 1.0, 0.0,
+        0.0, 1.0, 0.0, 1.0,
+        1.0, 0.0, 1.0, 0.0,
+        1.0, 1.0, 1.0, 1.0,
+        0.0, 1.0, 0.0, 1.0f32
+    ];
+
+    let vbo = gl::buffer::generate_buffer();
+    gl::buffer::bind_buffer(vbo, gl::ARRAY_BUFFER);
+    gl::buffer::buffer_data(&vertices, gl::ARRAY_BUFFER);
+
+    let vertex_shader = create_compiled_shader(VERTEX_SHADER, gl::VERTEX_SHADER);
+    let fragment_shader = create_compiled_shader(FRAGMENT_SHADER, gl::FRAGMENT_SHADER);
+
+    let program = gl::program::create_program();
+    gl::program::attach_shader(program, vertex_shader);
+    gl::program::attach_shader(program, fragment_shader);
+    gl::program::link_program(program);
+
+    gl::program::use_program(program);
+    
+    gl::program::delete_shader(vertex_shader);
+    gl::program::delete_shader(fragment_shader);
+
+    gl::program::vertex_attrib_pointer(0, 2, 4, 0);
+    gl::program::vertex_attrib_pointer(1, 2, 4, 2);
+    gl::program::enable_attribute(0);
+    gl::program::enable_attribute(1);
+
+    program
 }
 
-impl Polygon {
-    fn init() -> Self {
-        let vao = gl::buffer::generate_vertex_array();
-        gl::buffer::bind_array(vao);
-
-        let vertices = [
-            0.0, 0.0, 0.0, 0.0,
-            1.0, 0.0, 1.0, 0.0,
-            0.0, 1.0, 0.0, 1.0,
-            1.0, 0.0, 1.0, 0.0,
-            1.0, 1.0, 1.0, 1.0,
-            0.0, 1.0, 0.0, 1.0f32
-        ];
-
-        let vbo = gl::buffer::generate_buffer();
-        gl::buffer::bind_buffer(vbo, system_gl::ARRAY_BUFFER);
-        gl::buffer::buffer_data(&vertices, system_gl::ARRAY_BUFFER);
-
-        let vertex_shader_src = r"
-            #version 330 core
-
-            layout (location = 0) in vec2 position;
-            layout (location = 1) in vec2 texture_position;
-
-            out vec2 texture_cord;
-
-            uniform mat4 projection;
-            uniform mat4 model;
-
-            void main() {
-                gl_Position = projection * model * vec4(position, 0.0, 1.0);
-                texture_cord = texture_position;
-            }
-        ";
-        let fragment_shader_src = r"
-            #version 330 core
-
-            in vec2 texture_cord;
-            out vec4 color;
-
-            uniform sampler2D texture_img;
-
-            void main() {
-                color = texture(texture_img, texture_cord);
-            }
-        ";
-        let vertex_shader = gl::program::create_shader(system_gl::VERTEX_SHADER);
-        let fragment_shader = gl::program::create_shader(system_gl::FRAGMENT_SHADER);
-        gl::program::shader_source(vertex_shader, vertex_shader_src);
-        gl::program::shader_source(fragment_shader, fragment_shader_src);
-        gl::program::copmpile_shader(vertex_shader);
-        gl::program::copmpile_shader(fragment_shader);
-
-        let program = gl::program::create_program();
-        gl::program::attach_shader(program, vertex_shader);
-        gl::program::attach_shader(program, fragment_shader);
-        gl::program::link_program(program);
-
-        gl::program::use_program(program);
-        
-        gl::program::delete_shader(vertex_shader);
-        gl::program::delete_shader(fragment_shader);
-
-        gl::program::vertex_attrib_pointer(0, 2, 4, 0);
-        gl::program::vertex_attrib_pointer(1, 2, 4, 2);
-        gl::program::enable_attribute(0);
-        gl::program::enable_attribute(1);
-
-        let un_projection = gl::program::uniform_location(program, "projection");
-        let un_model = gl::program::uniform_location(program, "model");
-
-        Polygon { un_projection, un_model }
-    }
+fn create_compiled_shader(shader_src: &str, shader_type: u32) -> u32 {
+    let shader = gl::program::create_shader(shader_type);
+    gl::program::shader_source(shader, &shader_src);
+    gl::program::compile_shader(shader);
+    shader
 }
+
+static VERTEX_SHADER: &str = r"
+#version 330 core
+
+layout (location = 0) in vec2 position;
+layout (location = 1) in vec2 texture_position;
+
+out vec2 texture_cord;
+
+uniform mat4 projection;
+uniform mat4 model;
+
+void main() {
+    gl_Position = projection * model * vec4(position, 0.0, 1.0);
+    texture_cord = texture_position;
+}
+";
+
+static FRAGMENT_SHADER: &str = r"
+#version 330 core
+
+in vec2 texture_cord;
+out vec4 color;
+
+uniform sampler2D texture_img;
+
+void main() {
+    color = texture(texture_img, texture_cord);
+}
+";

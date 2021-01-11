@@ -1,12 +1,10 @@
 #[macro_use]
 extern crate spriter;
 
-use spriter::{Key, Program};
-use std::time::Duration;
+use spriter::Key;
 
 struct Tmp {
     value: i32,
-    run: bool,
 }
 
 impl Tmp {
@@ -19,33 +17,25 @@ impl Tmp {
     }
 
     fn handle_key_input(&mut self) {
-        handle_press!(Key::S, { println!("key s is pressed and s = {}", self.get_value()) });
-        handle_press!(Key::W, { println!("key s is pressed and w = {}", self.get_value()) });
-        if_pressed!(Key::D, {
+        if_pressed!(Key::S, { println!("key s is pressed and s = {}", self.get_value()) });
+        if_pressed!(Key::W, { println!("key s is pressed and w = {}", self.get_value()) });
+        if_holded!(Key::D, {
             let val = self.get_value();
             self.set_value(val + 1);
         });
-        if_pressed!(Key::A, {
+        if_holded!(Key::A, {
             let val = self.get_value();
             self.set_value(val - 1);
         });
-        if_pressed!(Key::Escape, { self.run = false });
-    }
-}
-
-impl Program for Tmp {
-    fn execute(&mut self, _frame_duration: Duration) -> bool {
-        self.handle_key_input();
-        false
-    }
-
-    fn is_run(&self) -> bool {
-        self.run
+        if_pressed!(Key::Escape, { spriter::program_stop() });
     }
 }
 
 fn main() {
     let (handler, window) = spriter::init("spriter", 512, 512);
-    let s = Tmp { value: 5 , run: true};
-    handler.run(s, window);
+    let mut s = Tmp { value: 5 };
+    handler.run(window, move |_frame_duration| {
+        s.handle_key_input();
+        false
+    });
 }

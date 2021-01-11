@@ -19,7 +19,7 @@ pub fn shader_source(shader: GLuint, src: &str) {
     }
 }
 
-pub fn copmpile_shader(shader: GLuint) {
+pub fn compile_shader(shader: GLuint) {
     unsafe {
         gl::CompileShader(shader);
     }

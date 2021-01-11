@@ -2,7 +2,7 @@
 extern crate spriter;
 extern crate rand;
 
-use spriter::{Program, Key, Canvas, Color};
+use spriter::{Key, Canvas, Color};
 
 use std::time::Duration;
 use std::collections::VecDeque;
@@ -15,7 +15,7 @@ enum Direction {
 }
 
 struct Snake {
-    body: VecDeque<(u32, u32)>,
+    body: VecDeque<(i32, i32)>,
     direction: Direction,
 }
 
@@ -32,71 +32,61 @@ impl Snake {
 
 struct Game {
     snake: Snake,
-    target: (u32, u32),
+    target: (i32, i32),
     canvas: Canvas,
     time_accumulator: Duration,
     step_time: Duration,
-    run: bool,
-}
-
-impl Program for Game {
-    fn execute(&mut self, frame_duration: Duration) -> bool {
-        self.canvas.clear();
-        if_pressed!(Key::W, {
-            self.snake.direction = Direction::UP;
-        });
-        if_pressed!(Key::S, {
-            self.snake.direction = Direction::DOWN;
-        });
-        if_pressed!(Key::A, {
-            self.snake.direction = Direction::LEFT;
-        });
-        if_pressed!(Key::D, {
-            self.snake.direction = Direction::RIGHT;
-        });
-        if_pressed!(Key::Escape, {self.run = false});
-
-        self.time_accumulator = self.time_accumulator.checked_add(frame_duration).unwrap();
-        if self.time_accumulator >= self.step_time {
-            self.time_accumulator = Duration::new(0, 0);
-            let first_part = self.snake.body.front().unwrap();
-            let new_part = match self.snake.direction {
-                Direction::UP => (first_part.0, first_part.1 - 1),
-                Direction::DOWN => (first_part.0, first_part.1 + 1),
-                Direction::LEFT => (first_part.0 - 1, first_part.1),
-                Direction::RIGHT => (first_part.0 + 1, first_part.1),
-            };
-            self.snake.body.push_front(new_part);
-            if new_part == self.target {
-                self.target = ((rand::random::<f32>() * 63.0).round() as u32, (rand::random::<f32>() * 63.0).round() as u32);
-            } else {
-                self.snake.body.pop_back();
-            }
-
-            let mut color = Color::new(0xCC, 0x88, 0x88);
-            // let mut color = 0xCC8888;
-            for (x, y) in &self.snake.body {
-                self.canvas.set_pixel(*x, *y, color);
-                color = Color::new(0x55, 0x55, 0xAA);
-            }
-            let target = &self.target;
-            self.canvas.set_pixel(target.0, target.1, color);
-            true
-        } else {
-            false
-        }
-    }
-
-    fn is_run(&self) -> bool {
-        self.run
-    }
 }
 
 fn main() {
     let (handler, mut window) = spriter::init("Snake", 512, 512);
     let mut canvas = window.create_canvas(0, 0, 512, 512, 64, 64);
     canvas.set_clear_color(Color::new(0x22, 0x22, 0x55));
-    let target = ((rand::random::<f32>() * 63.0).round() as u32, (rand::random::<f32>() * 63.0).round() as u32);
-    let game = Game { snake: Snake::new(), target, canvas, time_accumulator: Duration::new(0, 0), step_time: Duration::from_secs_f32(1.0 / 10.0), run: true };
-    handler.run(game, window);
+    let target = ((rand::random::<f32>() * 63.0).round() as i32, (rand::random::<f32>() * 63.0).round() as i32);
+    let mut game = Game { snake: Snake::new(), target, canvas, time_accumulator: Duration::new(0, 0), step_time: Duration::from_secs_f32(1.0 / 10.0) };
+    handler.run(window, move |frame_duration| {
+        game.canvas.clear();
+        if_pressed!(Key::W, {
+            game.snake.direction = Direction::UP;
+        });
+        if_pressed!(Key::S, {
+            game.snake.direction = Direction::DOWN;
+        });
+        if_pressed!(Key::A, {
+            game.snake.direction = Direction::LEFT;
+        });
+        if_pressed!(Key::D, {
+            game.snake.direction = Direction::RIGHT;
+        });
+        if_pressed!(Key::Escape, { spriter::program_stop() });
+
+        game.time_accumulator = game.time_accumulator.checked_add(frame_duration).unwrap();
+        if game.time_accumulator >= game.step_time {
+            game.time_accumulator = Duration::new(0, 0);
+            let first_part = game.snake.body.front().unwrap();
+            let new_part = match game.snake.direction {
+                Direction::UP => (first_part.0, first_part.1 - 1),
+                Direction::DOWN => (first_part.0, first_part.1 + 1),
+                Direction::LEFT => (first_part.0 - 1, first_part.1),
+                Direction::RIGHT => (first_part.0 + 1, first_part.1),
+            };
+            game.snake.body.push_front(new_part);
+            if new_part == game.target {
+                game.target = ((rand::random::<f32>() * 63.0).round() as i32, (rand::random::<f32>() * 63.0).round() as i32);
+            } else {
+                game.snake.body.pop_back();
+            }
+
+            let mut color = Color::new(0xCC, 0x88, 0x88);
+            for (x, y) in &game.snake.body {
+                game.canvas.set_pixel(*x, *y, color).unwrap();
+                color = Color::new(0x55, 0x55, 0xAA);
+            }
+            let target = &game.target;
+            game.canvas.set_pixel(target.0, target.1, color).unwrap();
+            true
+        } else {
+            false
+        }
+    });
 }
