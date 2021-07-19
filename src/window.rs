@@ -41,11 +41,20 @@ impl Window {
 }
 
 impl Render for Window {
-    fn update(&self) {
+    fn update(&mut self) {
         gl::clear();
-        for canvas in self.canvases.iter() {
+        for canvas in self.canvases.iter_mut() {
+            gl::buffer::bind_buffer(canvas.pbo, gl::PIXEL_UNPACK_BUFFER);
+            let mem_ptr = gl::map_buffer();
+            unsafe {
+                std::ptr::copy_nonoverlapping(canvas.texture_buffer_ptr, mem_ptr, canvas.buffer_size);
+            }
+            gl::unmap_buffer();
+
             gl::texture::bind_texture(canvas.texture);
-            gl::texture::texture_subimage(canvas.t_width, canvas.t_height, canvas.texture_buffer_ptr);
+            gl::texture::texture_subimage(canvas.t_width, canvas.t_height, std::ptr::null());
+            gl::buffer::bind_buffer(0, gl::PIXEL_UNPACK_BUFFER);
+
             gl::program::uniform_matrix(self.unfrm_model, &canvas.model_matrix);
             gl::program::uniform_matrix(self.unfrm_projection, &self.projection_matrix);
             gl::draw_quad();
@@ -59,9 +68,11 @@ impl Render for Window {
 }
 
 pub struct CanvasAtributes {
+    pbo: u32,
     texture: u32,
     model_matrix: [f32; 16],
-    texture_buffer_ptr: *const (),
+    texture_buffer_ptr: *const std::ffi::c_void,
+    buffer_size: usize,
     t_width: u32,
     t_height: u32,
 }
@@ -101,17 +112,24 @@ impl Canvas {
             0.0, 0.0, 1.0, 0.0,
             x, y, -1.0, 1.0,
         ];
-        let texture_buffer = vec![Color::new(0x80, 0xA0, 0x80); (t_width * t_height) as usize];
-        let texture_buffer_ptr = texture_buffer.as_ptr() as *const _;
         let color = Color::new(0x80, 0xA0, 0x80);
+        let texture_buffer = vec![color; (t_width * t_height) as usize];
+        let texture_buffer_ptr = texture_buffer.as_ptr() as *const _;
+        let buffer_size = std::mem::size_of_val(&(*texture_buffer));
+
         let texture = gl::texture::create_texture();
         gl::texture::bind_texture(texture);
         gl::texture::setup_texture();
         gl::texture::unpack_data_alignment();
         gl::texture::texture_image(t_width, t_height, texture_buffer_ptr);
 
+        let pbo = gl::buffer::generate_buffer();
+        gl::buffer::bind_buffer(pbo, gl::PIXEL_UNPACK_BUFFER);
+        gl::buffer::raw_buffer_data(gl::PIXEL_UNPACK_BUFFER, buffer_size, std::ptr::null(), gl::STREAM_DRAW);
+        gl::buffer::bind_buffer(0, gl::PIXEL_UNPACK_BUFFER);
+
         let canvas = Canvas { texture_buffer, color, t_width, t_height };
-        let canvas_atributes = CanvasAtributes { texture, model_matrix, texture_buffer_ptr, t_width, t_height };
+        let canvas_atributes = CanvasAtributes { pbo, texture, model_matrix, texture_buffer_ptr, buffer_size, t_width, t_height };
 
         (canvas, canvas_atributes)
     }
@@ -123,7 +141,7 @@ impl Canvas {
         let x = x as u32;
         let y = y as u32;
         let idx = (self.t_width * y + x) as usize;
-        self.texture_buffer[idx] = color; 
+        unsafe { *self.texture_buffer.get_unchecked_mut(idx) = color }; 
         Ok(())
     }
 

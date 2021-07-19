@@ -29,13 +29,22 @@ lazy_static! {
 }
 
 pub fn init(title: &str, width: u32, height: u32) -> (Runner, Window) {
+    #[cfg(target_os = "windows")]
+    {
+        extern crate winapi;
+        use winapi::um::combaseapi::CoInitializeEx;
+        use winapi::um::objbase::COINIT_MULTITHREADED;
+        unsafe {
+            CoInitializeEx(std::ptr::null_mut(), COINIT_MULTITHREADED);
+        }
+    }
+
     let event_loop = EventLoop::new();
 
     let window_builder = WindowBuilder::new()
         .with_title(title)
         .with_inner_size(PhysicalSize::new(width, height));
 
-    #[cfg(target_os = "windows")]
     let window_builder = {
         use glutin::platform::windows::WindowBuilderExtWindows;
         window_builder.with_drag_and_drop(false)
@@ -63,7 +72,7 @@ enum ProgramState {
 }
 
 impl Runner {
-    pub fn run<F>(self, window: Window, mut user_program: F) -> !
+    pub fn run<F>(self, mut window: Window, mut user_program: F) -> !
         where F: 'static + FnMut(Duration) -> bool 
     {
         program_run();
@@ -202,6 +211,6 @@ macro_rules! if_released {
 }
 
 trait Render {
-    fn update(&self);
+    fn update(&mut self);
     fn request_redraw(&self);
 }

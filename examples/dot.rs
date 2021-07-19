@@ -15,12 +15,14 @@ struct Dot {
 
 fn main() {
     let (handler, mut window) = spriter::init("Dot example", 512, 512);
-    let canvas = window.create_canvas(0, 0, 512, 512, 128, 128);
-    let mut dot = Dot { x: 64.0, y: 64.0, color: 0xFF2222, canvas, time_accumulator: Duration::new(0, 0) };
+    let mut canvas = window.create_canvas(0, 0, 512, 512, 64, 64);
+    canvas.set_clear_color(Color::from_u32(0x4422AA));
+    let mut dot = Dot { x: 31.0, y: 31.0, color: 0x4422AA, canvas, time_accumulator: Duration::new(0, 0) };
     handler.run(window, move |frame_duration| {
         dot.canvas.clear();
         let new_time = dot.time_accumulator.checked_add(frame_duration).unwrap();
         dot.time_accumulator = new_time;
+        if_pressed!(Key::Space, {dot.color = 0xAA9911});
         if_holded!(Key::W, {dot.y -= 0.001;});
         if_holded!(Key::S, {dot.y += 0.001;});
         if_holded!(Key::A, {dot.x -= 0.001;});
@@ -33,17 +35,17 @@ fn main() {
         if dot.x < 0.0 {
             dot.x = 0.0;
         }
-        if dot.x > 127.0 {
-            dot.x = 127.0;
+        if dot.x > 63.0 {
+            dot.x = 63.0;
         }
         if dot.y < 0.0 {
             dot.y = 0.0;
         }
-        if dot.y > 127.0 {
-            dot.y = 127.0;
+        if dot.y > 63.0 {
+            dot.y = 63.0;
         }
         dot.canvas.set_pixel(dot.x as i32, dot.y as i32, Color::from_u32(dot.color)).unwrap();
-        if dot.time_accumulator > Duration::from_secs_f64(1.0 / 60.0) {
+        if dot.time_accumulator > Duration::from_secs_f64(1.0 / 30.0) {
             dot.time_accumulator = Duration::new(0, 0);
             true
         } else {

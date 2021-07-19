@@ -14,6 +14,17 @@ pub fn bind_buffer(buffer: GLuint, type_: GLenum) {
     }
 }
 
+pub fn raw_buffer_data(type_: GLenum, size: usize, data_ptr: *const std::ffi::c_void, usage: GLenum) {
+    unsafe {
+        gl::BufferData(
+            type_,
+            size as isize,
+            data_ptr,
+            usage
+        )
+    }
+}
+
 pub fn buffer_data<T>(data: &[T], type_: GLenum) {
     unsafe {
         gl::BufferData(
