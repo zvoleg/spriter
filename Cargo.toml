@@ -1,7 +1,7 @@
 [package]
 name = "spriter"
 version = "0.1.0"
-authors = ["olegRus <oleg.rus178@gmail.com>"]
+authors = ["zvoleg <oleg.zaitsevv@gmail.com>"]
 edition = "2018"
 
 autoexamples = true
