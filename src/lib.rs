@@ -45,11 +45,6 @@ pub fn init(title: &str, width: u32, height: u32) -> (Runner, Window) {
         .with_title(title)
         .with_inner_size(PhysicalSize::new(width, height));
 
-    let window_builder = {
-        use glutin::platform::windows::WindowBuilderExtWindows;
-        window_builder.with_drag_and_drop(false)
-    };
-
     let windowed_context = ContextBuilder::new()
         .with_gl(glutin::GlRequest::Latest)
         .with_gl_profile(glutin::GlProfile::Core)
