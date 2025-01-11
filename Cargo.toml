@@ -1,6 +1,6 @@
 [package]
 name = "spriter"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["zvoleg <oleg.zaitsevv@gmail.com>"]
 edition = "2018"
 
@@ -10,7 +10,7 @@ autoexamples = true
 rand = "*"
 
 [dependencies]
-glutin = "0.25"
+glutin = "0.29.1"
 gl = "0.14"
 lazy_static = "1.4"
 
